@@ -313,6 +313,6 @@ class Rake:
         
         word_and_POS_tag = zip(word_list, POS_tags)
         
-        groups = groupby(word_and_POS_tag, lambda word, POS_tag: word not in self.to_ignore and POS_tag in self.accepted_pos_tags)
+        groups = groupby(word_and_POS_tag, lambda elem: elem[0] not in self.to_ignore and elem[1] in self.accepted_pos_tags)
         phrases: List[Phrase] = [tuple(group[1][0]) for group in groups if group[0]]
         return list(filter(lambda x: self.min_length <= len(x) <= self.max_length, phrases))

@@ -41,6 +41,7 @@ class Rake:
         include_repeated_phrases: bool = True,
         sentence_tokenizer: Optional[Callable[[str], List[str]]] = None,
         word_tokenizer: Optional[Callable[[str], List[str]]] = None,
+        accepted_pos_tags: Optional[List[str]] = ['Adj', 'Noun', 'Verb'],
     ):
         """Constructor.
 
@@ -69,6 +70,7 @@ class Rake:
                             ]
         :param sentence_tokenizer: Tokenizer used to tokenize the text string into sentences.
         :param word_tokenizer: Tokenizer used to tokenize the sentence string into words.
+        :param accepted_pos_tags: Part-of-speech tags to be accepted for keyword extraction.
         """
         # By default use degree to frequency ratio as the metric.
         if isinstance(ranking_metric, Metric):
@@ -92,6 +94,9 @@ class Rake:
 
         # All things which act as sentence breaks during keyword extraction.
         self.to_ignore: Set[str] = set(chain(self.stopwords, self.punctuations))
+        
+        # Allowed part-of-speech tags which take a role in sentence breaks during keyword extraction.
+        self.accepted_pos_tags = accepted_pos_tags
 
         # Assign min or max length to the attributes
         self.min_length: int = min_length
@@ -118,21 +123,23 @@ class Rake:
         self.rank_list: List[Tuple[float, Sentence]]
         self.ranked_phrases: List[Sentence]
 
-    def extract_keywords_from_text(self, text: str):
+    def extract_keywords_from_text(self, text: str, POS_tags: List[str]):
         """Method to extract keywords from the text provided.
 
         :param text: Text to extract keywords from, provided as a string.
+        :param POS_tags: Part-of-speech tag counterparts of the text.
         """
         sentences: List[Sentence] = self._tokenize_text_to_sentences(text)
-        self.extract_keywords_from_sentences(sentences)
+        self.extract_keywords_from_sentences(sentences, POS_tags)
 
-    def extract_keywords_from_sentences(self, sentences: List[Sentence]):
+    def extract_keywords_from_sentences(self, sentences: List[Sentence], POS_tags: List[str]):
         """Method to extract keywords from the list of sentences provided.
 
         :param sentences: Text to extraxt keywords from, provided as a list
                           of strings, where each string is a sentence.
+        :param POS_tags: Part-of-speech tag counterparts of the text.
         """
-        phrase_list: List[Phrase] = self._generate_phrases(sentences)
+        phrase_list: List[Phrase] = self._generate_phrases(sentences, POS_tags)
         self._build_frequency_dist(phrase_list)
         self._build_word_co_occurance_graph(phrase_list)
         self._build_ranklist(phrase_list)
@@ -241,12 +248,13 @@ class Rake:
         self.rank_list.sort(reverse=True)
         self.ranked_phrases = [ph[1] for ph in self.rank_list]
 
-    def _generate_phrases(self, sentences: List[Sentence]) -> List[Phrase]:
+    def _generate_phrases(self, sentences: List[Sentence], POS_tags: List[str]) -> List[Phrase]:
         """Method to generate contender phrases given the sentences of the text
         document.
 
         :param sentences: List of strings where each string represents a
                           sentence which forms the text.
+        :param POS_tags: Part-of-speech tag counterparts of the text.
         :return: Set of string tuples where each tuple is a collection
                  of words forming a contender phrase.
         """
@@ -254,7 +262,7 @@ class Rake:
         # Create contender phrases from sentences.
         for sentence in sentences:
             word_list: List[Word] = [word.lower() for word in self._tokenize_sentence_to_words(sentence)]
-            phrase_list.extend(self._get_phrase_list_from_words(word_list))
+            phrase_list.extend(self._get_phrase_list_from_words(word_list, POS_tags))
 
         # Based on user's choice to include or not include repeated phrases
         # we compute the phrase list and return it. If not including repeated
@@ -271,7 +279,7 @@ class Rake:
 
         return phrase_list
 
-    def _get_phrase_list_from_words(self, word_list: List[Word]) -> List[Phrase]:
+    def _get_phrase_list_from_words(self, word_list: List[Word], POS_tags: List[str]) -> List[Phrase]:
         """Method to create contender phrases from the list of words that form
         a sentence by dropping stopwords and punctuations and grouping the left
         words into phrases. Only phrases in the given length range (both limits
@@ -290,9 +298,16 @@ class Rake:
 
         :param word_list: List of words which form a sentence when joined in
                           the same order.
+        :param POS_tags: Part-of-speech tag counterparts of the text.
         :return: List of contender phrases honouring phrase length requirements
                  that are formed after dropping stopwords and punctuations.
         """
-        groups = groupby(word_list, lambda x: x not in self.to_ignore)
-        phrases: List[Phrase] = [tuple(group[1]) for group in groups if group[0]]
+        
+        if len(word_list) != len(POS_tags):
+            raise ValueError(f"Lengths of word list and POS tag list do not match. len(word_list)={len(word_list)} and len(POS_tags)={len(POS_tags)}")
+        
+        word_and_POS_tag = zip(word_list, POS_tags)
+        
+        groups = groupby(word_and_POS_tag, lambda word, POS_tag: word not in self.to_ignore and POS_tag in self.accepted_pos_tags)
+        phrases: List[Phrase] = [tuple(group[1][0]) for group in groups if group[0]]
         return list(filter(lambda x: self.min_length <= len(x) <= self.max_length, phrases))

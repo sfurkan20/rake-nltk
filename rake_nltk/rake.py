@@ -319,7 +319,9 @@ class Rake:
         
         keywords = []
         for phrase in keywords_and_POS_tags:
+            phraseWords = []
             for keyword, pos_tag in phrase:
-                keywords.append(keyword)
+                phraseWords.append(keyword)
+            keywords.append(tuple(phraseWords))
 
         return keywords

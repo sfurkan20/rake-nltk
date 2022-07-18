@@ -143,7 +143,7 @@ class Rake:
                           of strings, where each string is a sentence.
         :param POS_tags: Part-of-speech tag counterparts of the text.
         """
-        phrase_list: List[Phrase] = self._generate_phrases(sentences, POS_tags)
+        phrase_list: List[Phrase] = self._generate_phrases(sentences)
         self._build_frequency_dist(phrase_list)
         self._build_word_co_occurance_graph(phrase_list)
         self._build_ranklist(phrase_list)

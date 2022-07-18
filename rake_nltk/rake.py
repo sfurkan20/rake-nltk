@@ -41,6 +41,7 @@ class Rake:
         include_repeated_phrases: bool = True,
         sentence_tokenizer: Optional[Callable[[str], List[str]]] = None,
         word_tokenizer: Optional[Callable[[str], List[str]]] = None,
+        pos_tagger: Callable[[str], List[str]]
         accepted_pos_tags: Optional[List[str]] = ['Adj', 'Noun', 'Verb'],
     ):
         """Constructor.
@@ -70,6 +71,7 @@ class Rake:
                             ]
         :param sentence_tokenizer: Tokenizer used to tokenize the text string into sentences.
         :param word_tokenizer: Tokenizer used to tokenize the sentence string into words.
+        :param pos_tagger: Part-of-speech tagger used to get the tags of the words in the given sentence.
         :param accepted_pos_tags: Part-of-speech tags to be accepted for keyword extraction.
         """
         # By default use degree to frequency ratio as the metric.
@@ -248,7 +250,7 @@ class Rake:
         self.rank_list.sort(reverse=True)
         self.ranked_phrases = [ph[1] for ph in self.rank_list]
 
-    def _generate_phrases(self, sentences: List[Sentence], POS_tags: List[str]) -> List[Phrase]:
+    def _generate_phrases(self, sentences: List[Sentence]) -> List[Phrase]:
         """Method to generate contender phrases given the sentences of the text
         document.
 
@@ -262,7 +264,8 @@ class Rake:
         # Create contender phrases from sentences.
         for sentence in sentences:
             word_list: List[Word] = [word.lower() for word in self._tokenize_sentence_to_words(sentence)]
-            phrase_list.extend(self._get_phrase_list_from_words(word_list, POS_tags))
+            pos_tag_list: List[str] = [tag for tag in self.pos_tagger(sentence)]
+            phrase_list.extend(self._get_phrase_list_from_words(word_list, pos_tag_list))
 
         # Based on user's choice to include or not include repeated phrases
         # we compute the phrase list and return it. If not including repeated

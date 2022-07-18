@@ -41,7 +41,7 @@ class Rake:
         include_repeated_phrases: bool = True,
         sentence_tokenizer: Optional[Callable[[str], List[str]]] = None,
         word_tokenizer: Optional[Callable[[str], List[str]]] = None,
-        pos_tagger: Callable[[str], List[str]],
+        pos_tagger: Optional[Callable[[str], List[str]]] = None,
         accepted_pos_tags: Optional[List[str]] = ['Adj', 'Noun', 'Verb'],
     ):
         """Constructor.
@@ -118,6 +118,8 @@ class Rake:
             self.word_tokenizer = word_tokenizer
         else:
             self.word_tokenizer = nltk.tokenize.wordpunct_tokenize
+        
+        self.pos_tagger = pos_tagger
 
         # Stuff to be extracted from the provided text.
         self.frequency_dist: Dict[Word, int]

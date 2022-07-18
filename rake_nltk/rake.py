@@ -41,7 +41,7 @@ class Rake:
         include_repeated_phrases: bool = True,
         sentence_tokenizer: Optional[Callable[[str], List[str]]] = None,
         word_tokenizer: Optional[Callable[[str], List[str]]] = None,
-        pos_tagger: Callable[[str], List[str]]
+        pos_tagger: Callable[[str], List[str]],
         accepted_pos_tags: Optional[List[str]] = ['Adj', 'Noun', 'Verb'],
     ):
         """Constructor.
